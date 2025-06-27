@@ -1,7 +1,11 @@
-package handler
+package mongo
 
 import (
+	"context"
 	"net/http"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func setFlashMessage(w http.ResponseWriter, message string) {
@@ -27,19 +31,26 @@ func getFlashMessage(w http.ResponseWriter, r *http.Request) string {
 }
 
 func getCountriesFromDB() ([]string, error) {
-	rows, err := DB.Query("SELECT name FROM Countries")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	collection := GetCollection("RegistrationMongo", "Countries")
+
+	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cursor.Close(ctx)
 
 	var countries []string
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
+	for cursor.Next(ctx) {
+		var doc struct {
+			Name string `bson:"name"`
+		}
+		if err := cursor.Decode(&doc); err != nil {
 			return nil, err
 		}
-		countries = append(countries, name)
+		countries = append(countries, doc.Name)
 	}
 	return countries, nil
 }

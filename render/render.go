@@ -28,20 +28,19 @@ func RenderTemplateWithData(w http.ResponseWriter, temp string, data any) {
 		filepath.Join("templates", "base.html"),
 		filepath.Join("templates", "header.html"),
 		filepath.Join("templates", "footer.html"),
-		filepath.Join("templates", temp), // e.g. home.html or about.html
+		filepath.Join("templates", temp),
 	}
 
 	t, err := template.New("base.html").Funcs(funcMap).ParseFiles(tmplFiles...)
 	if err != nil {
-		log.Println("DB error:", err) // Log real error for devs
-		http.Error(w, "Something went wrong. Please try again.", http.StatusInternalServerError)
+		log.Println("Template parse error:", err)
+		http.Error(w, "Template rendering failed. Please try again later.", http.StatusInternalServerError)
 		return
 	}
 
-	// Always execute the base layout
 	err = t.ExecuteTemplate(w, "base.html", data)
 	if err != nil {
-		log.Println("DB error:", err) // Log real error for devs
-		http.Error(w, "Something went wrong. Please try again.", http.StatusInternalServerError)
+		log.Println("Template execution error:", err)
+		http.Error(w, "Template execution failed. Please try again later.", http.StatusInternalServerError)
 	}
 }

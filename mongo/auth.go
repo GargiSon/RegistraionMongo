@@ -1,11 +1,12 @@
-package handler
+package mongo
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"go2/render"
 	"log"
-	"mysqliteapp/render"
 	"net/http"
 	"net/smtp"
 	"net/url"
@@ -15,10 +16,11 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var store = sessions.NewCookieStore([]byte("super-secret-session-key")) //This means session is stored in client side browser cookies
+var store = sessions.NewCookieStore([]byte("super-secret-session-key"))
 
 const resetsecret = "hubjinkom"
 
@@ -46,18 +48,11 @@ func sendResetEmail(toEmail, resetLink string) error {
 			<p style="font-size: 14px;">Thanks,<br><strong>Your Team</strong></p>
 		</div>
 	</body>
-	</html>
-	`, resetLink, resetLink)
+	</html>`, resetLink, resetLink)
 
 	msg := []byte(subject + headers + body)
 
-	return smtp.SendMail(
-		"smtp.gmail.com:587",
-		auth,
-		email,
-		[]string{toEmail},
-		msg,
-	)
+	return smtp.SendMail("smtp.gmail.com:587", auth, email, []string{toEmail}, msg)
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -69,8 +64,15 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 
-	var storedHash string
-	err := DB.QueryRow("SELECT password FROM AdminNew WHERE email = ?", email).Scan(&storedHash)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	collection := GetCollection("RegistrationMongo", "AdminNew")
+
+	var result struct {
+		Password string `bson:"password"`
+	}
+	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&result)
 	if err != nil {
 		render.RenderTemplateWithData(w, "Login.html", EditPageData{
 			Error: "Invalid email or password",
@@ -78,37 +80,33 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password)) != nil {
+	if bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(password)) != nil {
 		render.RenderTemplateWithData(w, "Login.html", EditPageData{
 			Error: "Invalid email or password",
 		})
 		return
 	}
 
-	//Session is created
 	session, _ := store.Get(r, "session")
 	session.Values["authenticated"] = true
 	session.Values["email"] = email
-	// Get name before '@'
 	parts := strings.Split(email, "@")
-	username := parts[0]
-	session.Values["admin_name"] = username
+	session.Values["admin_name"] = parts[0]
 	err = session.Save(r, w)
-
 	if err != nil {
 		render.RenderTemplateWithData(w, "Login.html", EditPageData{
 			Error: "Failed to start session",
 		})
 		return
 	}
+
 	http.Redirect(w, r, "/home", http.StatusSeeOther)
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "session")
-	session.Options.MaxAge = -1 //Expire or delete cookie
+	session.Options.MaxAge = -1
 	session.Save(r, w)
-
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -118,31 +116,30 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == http.MethodPost {
-		email := r.FormValue("email")
-		var exists bool
-		err := DB.QueryRow("SELECT EXISTS(SELECT 1 FROM AdminNew WHERE email = ?)", email).Scan(&exists)
-		if err != nil || !exists {
-			setFlashMessage(w, "Email not Found")
-			http.Redirect(w, r, "/forgot", http.StatusSeeOther)
-			return
-		}
+	email := r.FormValue("email")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-		ts := fmt.Sprint(time.Now().Unix())
-		hash := sha256.Sum256([]byte(email + ts + resetsecret))
-		token := hex.EncodeToString(hash[:])
-
-		link := fmt.Sprintf("http://localhost:8080/reset?email=%s&ts=%s&token=%s", url.QueryEscape(email), ts, token)
-
-		if err := sendResetEmail(email, link); err != nil {
-			log.Println("Failed to send email:", err)
-			setFlashMessage(w, "Failed to send reset link. Try again.")
-		} else {
-			setFlashMessage(w, "Reset link sent! Check your email.")
-		}
+	collection := GetCollection("RegistrationMongo", "AdminNew")
+	count, err := collection.CountDocuments(ctx, bson.M{"email": email})
+	if err != nil || count == 0 {
+		setFlashMessage(w, "Email not Found")
 		http.Redirect(w, r, "/forgot", http.StatusSeeOther)
+		return
 	}
-	render.RenderTemplateWithData(w, "forgot.html", nil)
+
+	ts := fmt.Sprint(time.Now().Unix())
+	hash := sha256.Sum256([]byte(email + ts + resetsecret))
+	token := hex.EncodeToString(hash[:])
+
+	link := fmt.Sprintf("http://localhost:8080/reset?email=%s&ts=%s&token=%s", url.QueryEscape(email), ts, token)
+	if err := sendResetEmail(email, link); err != nil {
+		log.Println("Failed to send email:", err)
+		setFlashMessage(w, "Failed to send reset link. Try again.")
+	} else {
+		setFlashMessage(w, "Reset link sent! Check your email.")
+	}
+	http.Redirect(w, r, "/forgot", http.StatusSeeOther)
 }
 
 func ResetHandler(w http.ResponseWriter, r *http.Request) {
@@ -170,20 +167,24 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		if newPass != confirm {
 			render.RenderTemplateWithData(w, "Reset.html", EditPageData{
 				Error: "Passwords do not match.",
-				Email: email,
-				Ts:    ts,
-				Token: token,
+				Email: email, Ts: ts, Token: token,
 			})
 			return
 		}
 		hashed, _ := bcrypt.GenerateFromPassword([]byte(newPass), bcrypt.DefaultCost)
-		_, err := DB.Exec("UPDATE AdminNew SET password = ? WHERE email = ?", hashed, email)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		collection := GetCollection("RegistrationMongo", "AdminNew")
+		_, err := collection.UpdateOne(ctx, bson.M{"email": email}, bson.M{
+			"$set": bson.M{"password": string(hashed)},
+		})
+
 		if err != nil {
 			render.RenderTemplateWithData(w, "Reset.html", EditPageData{
 				Error: "Failed to update password",
-				Email: email,
-				Ts:    ts,
-				Token: token,
+				Email: email, Ts: ts, Token: token,
 			})
 			return
 		}
@@ -193,8 +194,6 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.RenderTemplateWithData(w, "Reset.html", EditPageData{
-		Email: email,
-		Ts:    ts,
-		Token: token,
+		Email: email, Ts: ts, Token: token,
 	})
 }
