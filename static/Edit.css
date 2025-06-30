@@ -1,0 +1,51 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+}
+table {
+    border-collapse: collapse;
+}
+td {
+    padding: 10px;
+    vertical-align: top;
+}
+input,
+textarea,
+select {
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.full-row {
+    text-align: left;
+    padding-top: 20px;
+}
+.register { 
+    background-color: rgb(200, 245, 219);
+}
+.inline-options {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.inline-options label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+.inline-options input {
+    width: auto;
+}
+.cancel {
+    padding: 10px;
+    width: 100%;
+    margin-top: 4px;
+    background-color: rgb(255, 213, 213);
+    border: 2px solid #000000;
+    cursor: pointer;
+}
+    .remove_image{
+    width: 18px;
+    height: 18px;
+}

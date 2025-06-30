@@ -3,72 +3,7 @@
 <html lang="en">
 <head>
     <title>Forgot Password</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 30px;
-        }
-
-        .form-container {
-            max-width: 500px;
-            margin: auto;
-            background: #f5f5f5;
-            padding: 30px;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-        }
-
-        h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        td {
-            padding: 10px;
-            vertical-align: top;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        input[type="email"], input[type="submit"] {
-            padding: 10px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        input[type="submit"] {
-            margin-top: 15px;
-            background-color: rgb(200, 245, 219);
-            border: 2px solid #000000;
-            cursor: pointer;
-        }
-
-        .error {
-            color: red;
-            margin-top: 15px;
-            text-align: center;
-        }
-
-        .info {
-            color: green;
-            margin-top: 15px;
-            text-align: center;
-        }
-
-        .link {
-            margin-top: 15px;
-            display: block;
-            text-align: right;
-        }
-    </style>
+    <link rel="stylesheet" href="\static\Forget.css">
 </head>
 <body>
     <div class="form-container">
@@ -83,10 +18,8 @@
                     <td colspan="2"><input type="submit" value="Send Reset Link"></td>
                 </tr>
             </table>
-
             {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
             {{if .Info}}<p class="info">{{.Info}}</p>{{end}}
-
             <a class="link" href="/">Back to Login</a>
         </form>
     </div>

@@ -3,90 +3,13 @@
 <html lang="en">
 <head>
     <title>Registered Users</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-
-        .header-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .header-bar .left-buttons {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header-bar .logout-btn {
-            margin-right: 30px; /* little left from extreme right */
-        }
-
-        table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 10px;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            background-color: #f9f9f9;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #f2f2f2;
-        }
-
-        input[type="submit"], button {
-            padding: 6px 12px;
-            cursor: pointer;
-        }
-
-        .edit {
-            background-color: rgb(200, 245, 219);
-        }
-
-        .delete {
-            background-color: rgb(233, 147, 147);
-        }
-
-        .pagination {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .pagination a {
-            padding: 6px 12px;
-            margin-right: 5px;
-            background-color: #eee;
-            text-decoration: none;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        .pagination a.active {
-            background-color: #7aaee6;
-            color: white;
-        }
-
-        .sort-form {
-            margin-bottom: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="\static\Home.css">
 </head>
 <body>
-
     <h2>List Of Users</h2>
     {{if .Error}}
     <p style="color:red;">{{.Error}}</p>
     {{end}}
-
     <div class="header-bar">
         <div class="left-buttons">
             <strong>Welcome, {{.AdminName}}</strong>

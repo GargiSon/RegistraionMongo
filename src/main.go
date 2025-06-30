@@ -9,6 +9,8 @@ import (
 
 func main() {
 	mongo.InitMongoData()
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
 	http.HandleFunc("/", mongo.LoginHandler)
 	http.HandleFunc("/login", mongo.LoginHandler)
 	http.HandleFunc("/logout", mongo.LogoutHandler)
