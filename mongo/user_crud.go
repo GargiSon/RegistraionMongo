@@ -35,7 +35,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		sports := r.Form["sports"]
 		dobStr := r.FormValue("dob")
 		country := r.FormValue("country")
-
 		joinedSports := strings.Join(sports, ",")
 
 		user := User{
@@ -49,28 +48,13 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			Country:  country,
 		}
 
-		file, _, err := r.FormFile("image")
-		if err != nil {
-			render.RenderTemplateWithData(w, "Registration.html", EditPageData{
-				Error: "Error in image uploading",
-			})
-			return
-		}
-		defer file.Close()
-
-		imageData, err := io.ReadAll(file)
-		if err != nil {
-			render.RenderTemplateWithData(w, "Registration.html", EditPageData{
-				Error: "Error in image uploading",
-			})
-			return
-		}
-
+		//sports
 		sportsMap := make(map[string]bool)
 		for _, s := range sports {
 			sportsMap[s] = true
 		}
 
+		//password
 		if password != confirm {
 			render.RenderTemplateWithData(w, "Registration.html", EditPageData{
 				Error:     "Passwords do not match",
@@ -81,6 +65,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//dob
 		dob, err := time.Parse("2006-01-02", dobStr)
 		if err != nil || dob.After(time.Now()) {
 			render.RenderTemplateWithData(w, "Registration.html", EditPageData{
@@ -92,6 +77,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//mobile number
 		match, err := regexp.MatchString(`^(\+\d{1,3})?\d{10}$`, mobile)
 		if err != nil || !match {
 			render.RenderTemplateWithData(w, "Registration.html", EditPageData{
@@ -103,6 +89,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//hashing password
 		hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
 			render.RenderTemplateWithData(w, "Registration.html", EditPageData{
@@ -112,6 +99,19 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 				SportsMap: sportsMap,
 			})
 			return
+		}
+
+		//image
+		file, _, err := r.FormFile("image")
+		if err == nil {
+			defer file.Close()
+			_, err := io.ReadAll(file)
+			if err != nil {
+				render.RenderTemplateWithData(w, "Registration.html", EditPageData{
+					Error: "Error in image uploading",
+				})
+				return
+			}
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -140,7 +140,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = collection.InsertOne(ctx, bson.M{
+		doc := bson.M{
 			"username": username,
 			"password": string(hashed),
 			"email":    email,
@@ -150,8 +150,10 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			"sports":   joinedSports,
 			"dob":      dobStr,
 			"country":  country,
-			"image":    imageData,
-		})
+		}
+
+		_, err = collection.InsertOne(ctx, doc)
+
 		if err != nil {
 			render.RenderTemplateWithData(w, "Registration.html", EditPageData{
 				Error:     "Registration failed: " + err.Error(),
@@ -172,7 +174,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func EditHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.FormValue("id")
+	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		render.RenderTemplateWithData(w, "Home.html", EditPageData{Error: "Missing user ID"})
 		return

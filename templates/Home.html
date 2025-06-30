@@ -108,36 +108,36 @@
 
         <label>Order:
             <select name="order" onchange="this.form.submit()">
-                <option value="asc" {{if eq .SortOrder "asc"}}selected{{end}}>Ascending</option>
-                <option value="desc" {{if eq .SortOrder "desc"}}selected{{end}}>Descending</option>
+                <option value="asc" {{if eq .SortOrder "asc" }}selected{{end}}>Ascending</option>
+                <option value="desc" {{if eq .SortOrder "desc" }}selected{{end}}>Descending</option>
             </select>
         </label>
     </form>
 
     <table>
         <tr>
-            <th>ID</th>
+            <th>#</th>
             <th>Username</th>
             <th>Email</th>
             <th>Mobile</th>
             <th>Actions</th>
         </tr>
 
-        {{range .Users}}
+        {{range $index , $user := .Users}}
         <tr>
-            <td>{{.ID}}</td>
-            <td>{{.Username}}</td>
-            <td>{{.Email}}</td>
-            <td>{{.Mobile}}</td>
+            <td>{{add $index 1}}</td>
+            <td>{{$user.Username}}</td>
+            <td>{{$user.Email}}</td>
+            <td>{{$user.Mobile}}</td>
             <td>
-                <form action="/edit" method="POST" style="display:inline">
-                    <input type="hidden" name="id" value="{{.ID}}">
-                    <input type="submit" value="Edit" class="edit">
-                </form>
+                <a href="/edit?id={{$user.ID.Hex}}">
+                    <button type="button" class="edit">Edit</button>
+                </a>
                 <form action="/delete" method="POST" style="display:inline">
-                    <input type="hidden" name="id" value="{{.ID}}">
+                    <input type="hidden" name="id" value="{{$user.ID.Hex}}">
                     <input type="submit" value="Delete" class="delete" onclick="return confirm('Are you sure?');">
                 </form>
+
             </td>
         </tr>
         {{end}}

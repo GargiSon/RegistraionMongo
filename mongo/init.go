@@ -41,7 +41,6 @@ func InitMongoData() {
 	if err != nil {
 		log.Println("Error checking AdminNew:", err)
 	} else if adminCount == 0 {
-		// Read from environment
 		adminEmail := os.Getenv("ADMIN_EMAIL")
 		adminPassword := os.Getenv("ADMIN_PASSWORD")
 
