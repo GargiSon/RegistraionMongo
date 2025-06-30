@@ -35,3 +35,8 @@ type EditPageData struct {
 	SortOrder  string
 	AdminName  string
 }
+
+type Admin struct {
+	Email    string `bson:"email"`
+	Password string `bson:"password"`
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,8 +27,7 @@ func InitMongoData() {
 			bson.M{"name": "AFGHANISTHAN"},
 			bson.M{"name": "FRANCE"},
 		}
-		_, err := countryColl.InsertMany(ctx, countries)
-		if err != nil {
+		if _, err := countryColl.InsertMany(ctx, countries); err != nil {
 			log.Println("Failed to insert default countries:", err)
 		} else {
 			fmt.Println("Inserted default countries.")
@@ -41,13 +41,26 @@ func InitMongoData() {
 	if err != nil {
 		log.Println("Error checking AdminNew:", err)
 	} else if adminCount == 0 {
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin1001"), bcrypt.DefaultCost)
+		// Read from environment
+		adminEmail := os.Getenv("ADMIN_EMAIL")
+		adminPassword := os.Getenv("ADMIN_PASSWORD")
+
+		if adminEmail == "" || adminPassword == "" {
+			log.Println("ADMIN_EMAIL or ADMIN_PASSWORD not set in environment variables")
+			return
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+		if err != nil {
+			log.Println("Failed to hash admin password:", err)
+			return
+		}
+
 		admin := bson.M{
-			"email":    "gargi.soni@loginradius.com",
+			"email":    adminEmail,
 			"password": string(hashedPassword),
 		}
-		_, err := adminColl.InsertOne(ctx, admin)
-		if err != nil {
+		if _, err := adminColl.InsertOne(ctx, admin); err != nil {
 			log.Println("Failed to insert default admin:", err)
 		} else {
 			fmt.Println("Inserted default admin.")
