@@ -1,9 +1,11 @@
-package mongo
+package handler
 
 import (
 	"context"
 	"encoding/base64"
+	"go2/mongo"
 	"go2/render"
+	"go2/utils"
 	"io"
 	"net/http"
 	"regexp"
@@ -16,7 +18,7 @@ import (
 )
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	countries, err := getCountriesFromDB()
+	countries, err := utils.GetCountriesFromDB()
 	if err != nil {
 		render.RenderTemplateWithData(w, "Registration.html", EditPageData{
 			Error: "Error fetching countries: " + err.Error(),
@@ -116,7 +118,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		collection := GetCollection("RegistrationMongo", "New")
+		collection := mongo.GetCollection("RegistrationMongo", "New")
 
 		// Check if email or mobile already exists
 		countEmail, _ := collection.CountDocuments(ctx, bson.M{"email": email})
@@ -163,7 +165,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		setFlashMessage(w, "User successfully registered!")
+		utils.SetFlashMessage(w, "User successfully registered!")
 		http.Redirect(w, r, "/home", http.StatusSeeOther)
 		return
 	}
@@ -190,7 +192,7 @@ func EditHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := GetCollection("RegistrationMongo", "New")
+	collection := mongo.GetCollection("RegistrationMongo", "New")
 
 	var user User
 	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
@@ -202,7 +204,7 @@ func EditHandler(w http.ResponseWriter, r *http.Request) {
 	if len(user.Image) > 0 {
 		user.ImageBase64 = base64.StdEncoding.EncodeToString(user.Image)
 	}
-	countries, _ := getCountriesFromDB()
+	countries, _ := utils.GetCountriesFromDB()
 
 	sportsMap := make(map[string]bool)
 	for _, sport := range strings.Split(user.Sports, ",") {
@@ -232,7 +234,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.FormValue("id")
 	objID, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		setFlashMessage(w, "Invalid ID")
+		utils.SetFlashMessage(w, "Invalid ID")
 		http.Redirect(w, r, "/home", http.StatusSeeOther)
 		return
 	}
@@ -248,20 +250,20 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	match, _ := regexp.MatchString(`^(\+\d{1,3})?\d{10}$`, mobile)
 	if !match {
-		setFlashMessage(w, "Invalid mobile format")
+		utils.SetFlashMessage(w, "Invalid mobile format")
 		http.Redirect(w, r, "/home", http.StatusSeeOther)
 		return
 	}
 	dob, err := time.Parse("2006-01-02", dobStr)
 	if err != nil || dob.After(time.Now()) {
-		setFlashMessage(w, "Invalid DOB")
+		utils.SetFlashMessage(w, "Invalid DOB")
 		http.Redirect(w, r, "/home", http.StatusSeeOther)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	collection := GetCollection("RegistrationMongo", "New")
+	collection := mongo.GetCollection("RegistrationMongo", "New")
 
 	update := bson.M{
 		"username": username,
@@ -284,9 +286,9 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = collection.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": update})
 	if err != nil {
-		setFlashMessage(w, "Update failed: "+err.Error())
+		utils.SetFlashMessage(w, "Update failed: "+err.Error())
 	} else {
-		setFlashMessage(w, "User successfully updated!")
+		utils.SetFlashMessage(w, "User successfully updated!")
 	}
 	http.Redirect(w, r, "/home", http.StatusSeeOther)
 }
@@ -301,20 +303,20 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	objID, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		setFlashMessage(w, "Invalid ID")
+		utils.SetFlashMessage(w, "Invalid ID")
 		http.Redirect(w, r, "/home", http.StatusSeeOther)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	collection := GetCollection("RegistrationMongo", "New")
+	collection := mongo.GetCollection("RegistrationMongo", "New")
 
 	_, err = collection.DeleteOne(ctx, bson.M{"_id": objID})
 	if err != nil {
-		setFlashMessage(w, "Error deleting user")
+		utils.SetFlashMessage(w, "Error deleting user")
 	} else {
-		setFlashMessage(w, "User deleted!")
+		utils.SetFlashMessage(w, "User deleted!")
 	}
 	http.Redirect(w, r, "/home", http.StatusSeeOther)
 }

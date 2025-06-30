@@ -1,4 +1,4 @@
-package mongo
+package handler
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -34,11 +34,6 @@ type EditPageData struct {
 	SortField  string
 	SortOrder  string
 	AdminName  string
-}
-
-type Admin struct {
-	Email    string `bson:"email"`
-	Password string `bson:"password"`
 }
 
 type EmailData struct {

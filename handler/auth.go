@@ -1,4 +1,4 @@
-package mongo
+package handler
 
 import (
 	"bytes"
@@ -6,7 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"go2/mongo"
 	"go2/render"
+	"go2/utils"
 	"log"
 	"net/http"
 	"net/smtp"
@@ -62,7 +64,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := GetCollection("RegistrationMongo", "AdminNew")
+	collection := mongo.GetCollection("RegistrationMongo", "AdminNew")
 
 	var result struct {
 		Password string `bson:"password"`
@@ -107,7 +109,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		render.RenderTemplateWithData(w, "Forgot.html", EditPageData{Info: getFlashMessage(w, r)})
+		render.RenderTemplateWithData(w, "Forgot.html", EditPageData{Info: utils.GetFlashMessage(w, r)})
 		return
 	}
 
@@ -115,10 +117,10 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := GetCollection("RegistrationMongo", "AdminNew")
+	collection := mongo.GetCollection("RegistrationMongo", "AdminNew")
 	count, err := collection.CountDocuments(ctx, bson.M{"email": email})
 	if err != nil || count == 0 {
-		setFlashMessage(w, "Email not Found")
+		utils.SetFlashMessage(w, "Email not Found")
 		http.Redirect(w, r, "/forgot", http.StatusSeeOther)
 		return
 	}
@@ -130,9 +132,9 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	link := fmt.Sprintf("http://localhost:8080/reset?email=%s&ts=%s&token=%s", url.QueryEscape(email), ts, token)
 	if err := sendResetEmail(email, link); err != nil {
 		log.Println("Failed to send email:", err)
-		setFlashMessage(w, "Failed to send reset link. Try again.")
+		utils.SetFlashMessage(w, "Failed to send reset link. Try again.")
 	} else {
-		setFlashMessage(w, "Reset link sent! Check your email.")
+		utils.SetFlashMessage(w, "Reset link sent! Check your email.")
 	}
 	http.Redirect(w, r, "/forgot", http.StatusSeeOther)
 }
@@ -171,7 +173,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		collection := GetCollection("RegistrationMongo", "AdminNew")
+		collection := mongo.GetCollection("RegistrationMongo", "AdminNew")
 		_, err := collection.UpdateOne(ctx, bson.M{"email": email}, bson.M{
 			"$set": bson.M{"password": string(hashed)},
 		})
@@ -183,7 +185,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		setFlashMessage(w, "Password updated successfully.")
+		utils.SetFlashMessage(w, "Password updated successfully.")
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}

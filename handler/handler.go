@@ -1,8 +1,10 @@
-package mongo
+package handler
 
 import (
 	"context"
+	"go2/mongo"
 	"go2/render"
+	"go2/utils"
 	"net/http"
 	"strconv"
 	"time"
@@ -60,7 +62,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := GetCollection("RegistrationMongo", "New")
+	collection := mongo.GetCollection("RegistrationMongo", "New")
 
 	findOptions := options.Find().
 		SetSkip(int64(offset)).
@@ -94,7 +96,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	totalPages := int((total + int64(limit) - 1) / int64(limit))
 
-	flash := getFlashMessage(w, r)
+	flash := utils.GetFlashMessage(w, r)
 
 	render.RenderTemplateWithData(w, "Home.html", EditPageData{
 		Users:      users,

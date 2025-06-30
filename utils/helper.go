@@ -1,14 +1,15 @@
-package mongo
+package utils
 
 import (
 	"context"
+	"go2/mongo"
 	"net/http"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func setFlashMessage(w http.ResponseWriter, message string) {
+func SetFlashMessage(w http.ResponseWriter, message string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  "flash",
 		Value: message,
@@ -16,7 +17,7 @@ func setFlashMessage(w http.ResponseWriter, message string) {
 	})
 }
 
-func getFlashMessage(w http.ResponseWriter, r *http.Request) string {
+func GetFlashMessage(w http.ResponseWriter, r *http.Request) string {
 	cookie, err := r.Cookie("flash")
 	if err != nil {
 		return ""
@@ -30,11 +31,11 @@ func getFlashMessage(w http.ResponseWriter, r *http.Request) string {
 	return cookie.Value
 }
 
-func getCountriesFromDB() ([]string, error) {
+func GetCountriesFromDB() ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := GetCollection("RegistrationMongo", "Countries")
+	collection := mongo.GetCollection("RegistrationMongo", "Countries")
 
 	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
