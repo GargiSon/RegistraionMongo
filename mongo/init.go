@@ -15,7 +15,11 @@ func InitMongoData() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	db := "RegistrationMongo"
+	db := os.Getenv("MONGO_DB_NAME")
+	if db == "" {
+		log.Println("MONGO_DB_NAME not set in environment variables")
+		return
+	}
 
 	countryColl := GetCollection(db, "Countries")
 	countryCount, err := countryColl.CountDocuments(ctx, bson.M{})
