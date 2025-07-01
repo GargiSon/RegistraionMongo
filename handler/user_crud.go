@@ -118,7 +118,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		collection := mongo.GetCollection("RegistrationMongo", "New")
+		collection := mongo.GetCollection("RegistrationMongo", "users")
 
 		// Check if email or mobile already exists
 		countEmail, _ := collection.CountDocuments(ctx, bson.M{"email": email})
@@ -192,7 +192,7 @@ func EditHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := mongo.GetCollection("RegistrationMongo", "New")
+	collection := mongo.GetCollection("RegistrationMongo", "users")
 
 	var user User
 	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
@@ -263,7 +263,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	collection := mongo.GetCollection("RegistrationMongo", "New")
+	collection := mongo.GetCollection("RegistrationMongo", "users")
 
 	update := bson.M{
 		"username": username,
@@ -310,7 +310,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	collection := mongo.GetCollection("RegistrationMongo", "New")
+	collection := mongo.GetCollection("RegistrationMongo", "users")
 
 	_, err = collection.DeleteOne(ctx, bson.M{"_id": objID})
 	if err != nil {

@@ -21,12 +21,12 @@ func InitMongoData() {
 		return
 	}
 
-	countryColl := GetCollection(db, "Countries")
+	countryColl := GetCollection(db, "countries")
 	countryCount, err := countryColl.CountDocuments(ctx, bson.M{})
 	if err != nil {
-		log.Println("Error checking Countries:", err)
+		log.Println("Error checking countries:", err)
 	} else if countryCount == 0 {
-		countries := []interface{}{
+		countries := []any{
 			bson.M{"name": "INDIA"},
 			bson.M{"name": "AFGHANISTHAN"},
 			bson.M{"name": "FRANCE"},
@@ -40,10 +40,10 @@ func InitMongoData() {
 		fmt.Println("Countries already exist.")
 	}
 
-	adminColl := GetCollection(db, "AdminNew")
+	adminColl := GetCollection(db, "admins")
 	adminCount, err := adminColl.CountDocuments(ctx, bson.M{})
 	if err != nil {
-		log.Println("Error checking AdminNew:", err)
+		log.Println("Error checking admins:", err)
 	} else if adminCount == 0 {
 		adminEmail := os.Getenv("ADMIN_EMAIL")
 		adminPassword := os.Getenv("ADMIN_PASSWORD")
@@ -72,11 +72,11 @@ func InitMongoData() {
 		fmt.Println("Admin already exists.")
 	}
 
-	newColl := GetCollection(db, "New")
-	docCount, err := newColl.CountDocuments(ctx, bson.M{})
+	usersColl := GetCollection(db, "users")
+	userCount, err := usersColl.CountDocuments(ctx, bson.M{})
 	if err != nil {
-		log.Println("Error checking New collection:", err)
-	} else if docCount == 0 {
-		fmt.Println("'New' collection ready for user registrations.")
+		log.Println("Error checking users collection:", err)
+	} else if userCount == 0 {
+		fmt.Println("'users' collection ready for user registrations.")
 	}
 }

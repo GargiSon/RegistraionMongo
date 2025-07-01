@@ -62,7 +62,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := mongo.GetCollection("RegistrationMongo", "New")
+	collection := mongo.GetCollection("RegistrationMongo", "users")
 
 	findOptions := options.Find().
 		SetSkip(int64(offset)).

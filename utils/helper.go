@@ -35,7 +35,7 @@ func GetCountriesFromDB() ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := mongo.GetCollection("RegistrationMongo", "Countries")
+	collection := mongo.GetCollection("RegistrationMongo", "countries")
 
 	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {

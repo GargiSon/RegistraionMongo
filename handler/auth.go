@@ -64,7 +64,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := mongo.GetCollection("RegistrationMongo", "AdminNew")
+	collection := mongo.GetCollection("RegistrationMongo", "admins")
 
 	var result struct {
 		Password string `bson:"password"`
@@ -117,7 +117,7 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := mongo.GetCollection("RegistrationMongo", "AdminNew")
+	collection := mongo.GetCollection("RegistrationMongo", "admins")
 	count, err := collection.CountDocuments(ctx, bson.M{"email": email})
 	if err != nil || count == 0 {
 		utils.SetFlashMessage(w, "Email not Found")
@@ -173,7 +173,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		collection := mongo.GetCollection("RegistrationMongo", "AdminNew")
+		collection := mongo.GetCollection("RegistrationMongo", "admins")
 		_, err := collection.UpdateOne(ctx, bson.M{"email": email}, bson.M{
 			"$set": bson.M{"password": string(hashed)},
 		})

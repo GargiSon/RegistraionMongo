@@ -9,6 +9,9 @@ import (
 )
 
 func main() {
+	// Run this single time
+	// mongo.Connect()
+
 	mongo.InitMongoData()
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
