@@ -8,9 +8,7 @@
 <body>
     <div class="form-container">
         <h2>Reset Password</h2>
-        <form action="/reset" method="POST">
-            <input type="hidden" name="email" value="{{.Email}}">
-            <input type="hidden" name="ts" value="{{.Ts}}">
+        <form action="/reset?token={{.Token}}" method="POST">
             <input type="hidden" name="token" value="{{.Token}}">
 
             <table>

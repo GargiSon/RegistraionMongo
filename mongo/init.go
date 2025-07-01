@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func InitMongoData() {
@@ -40,43 +39,36 @@ func InitMongoData() {
 		fmt.Println("Countries already exist.")
 	}
 
-	adminColl := GetCollection(db, "admins")
-	adminCount, err := adminColl.CountDocuments(ctx, bson.M{})
-	if err != nil {
-		log.Println("Error checking admins:", err)
-	} else if adminCount == 0 {
-		adminEmail := os.Getenv("ADMIN_EMAIL")
-		adminPassword := os.Getenv("ADMIN_PASSWORD")
+	//Admins manually insert in database, and forgot password is used for reseting the password
+	// adminColl := GetCollection(db, "admins")
+	// adminCount, err := adminColl.CountDocuments(ctx, bson.M{})
+	// if err != nil {
+	// 	log.Println("Error checking admins:", err)
+	// 	return
+	// }
+	// if adminCount == 0 {
+	// 	adminEmail := os.Getenv("ADMIN_EMAIL")
+	// 	adminPassword := os.Getenv("ADMIN_PASSWORD")
 
-		if adminEmail == "" || adminPassword == "" {
-			log.Println("ADMIN_EMAIL or ADMIN_PASSWORD not set in environment variables")
-			return
-		}
+	// 	if adminEmail == "" || adminPassword == "" {
+	// 		log.Println("ADMIN_EMAIL or ADMIN_PASSWORD not set")
+	// 		return
+	// 	}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
-		if err != nil {
-			log.Println("Failed to hash admin password:", err)
-			return
-		}
+	// 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+	// 	if err != nil {
+	// 		log.Println("Failed to hash admin password:", err)
+	// 		return
+	// 	}
 
-		admin := bson.M{
-			"email":    adminEmail,
-			"password": string(hashedPassword),
-		}
-		if _, err := adminColl.InsertOne(ctx, admin); err != nil {
-			log.Println("Failed to insert default admin:", err)
-		} else {
-			fmt.Println("Inserted default admin.")
-		}
-	} else {
-		fmt.Println("Admin already exists.")
-	}
-
-	usersColl := GetCollection(db, "users")
-	userCount, err := usersColl.CountDocuments(ctx, bson.M{})
-	if err != nil {
-		log.Println("Error checking users collection:", err)
-	} else if userCount == 0 {
-		fmt.Println("'users' collection ready for user registrations.")
-	}
+	// 	admin := bson.M{
+	// 		"email":    adminEmail,
+	// 		"password": string(hashedPassword),
+	// 	}
+	// 	if _, err := adminColl.InsertOne(ctx, admin); err != nil {
+	// 		log.Println("Failed to insert default admin:", err)
+	// 	} else {
+	// 		fmt.Println("Inserted default admin.")
+	// 	}
+	// }
 }

@@ -2,6 +2,9 @@ package utils
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"go2/mongo"
 	"net/http"
 	"time"
@@ -54,4 +57,15 @@ func GetCountriesFromDB() ([]string, error) {
 		countries = append(countries, doc.Name)
 	}
 	return countries, nil
+}
+
+func GenerateSecureToken(length int) string {
+	bytes := make([]byte, length)
+	_, _ = rand.Read(bytes)
+	return hex.EncodeToString(bytes)
+}
+
+func HashSHA256(data string) string {
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:])
 }

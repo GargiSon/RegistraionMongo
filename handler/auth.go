@@ -3,30 +3,24 @@ package handler
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"go2/mongo"
 	"go2/render"
 	"go2/utils"
-	"log"
 	"net/http"
 	"net/smtp"
-	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"text/template"
 	"time"
 
 	"github.com/gorilla/sessions"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var store = sessions.NewCookieStore([]byte("super-secret-session-key"))
-
-const resetsecret = "hubjinkom"
 
 func sendResetEmail(toEmail, resetLink string) error {
 	email := os.Getenv("SMTP_EMAIL")
@@ -113,48 +107,70 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//1. Admin Enters email through form
 	email := r.FormValue("email")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := mongo.GetCollection("RegistrationMongo", "admins")
-	count, err := collection.CountDocuments(ctx, bson.M{"email": email})
-	if err != nil || count == 0 {
-		utils.SetFlashMessage(w, "Email not Found")
+	//2. Find email in database and Display Generic message after getting email to provide authentication
+	adminColl := mongo.GetCollection("RegistrationMongo", "admins")
+	var admin struct {
+		ID    primitive.ObjectID `bson:"_id"`
+		Email string             `bson:"email"`
+	}
+	err := adminColl.FindOne(ctx, bson.M{"email": email}).Decode(&admin)
+	utils.SetFlashMessage(w, "If the email exists, a reset link will be sent.")
+	//If the admin donot exist, do not proceed further, silently redirect
+	if err != nil {
 		http.Redirect(w, r, "/forgot", http.StatusSeeOther)
 		return
 	}
 
-	ts := fmt.Sprint(time.Now().Unix())
-	hash := sha256.Sum256([]byte(email + ts + resetsecret))
-	token := hex.EncodeToString(hash[:])
+	//3. Generate secure token(generate + hash + expiry)
+	rawToken := utils.GenerateSecureToken(64)
+	tokenHash := utils.HashSHA256(rawToken)
+	expiry := time.Now().Add(15 * time.Minute).Unix()
 
-	link := fmt.Sprintf("http://localhost:8080/reset?email=%s&ts=%s&token=%s", url.QueryEscape(email), ts, token)
-	if err := sendResetEmail(email, link); err != nil {
-		log.Println("Failed to send email:", err)
-		utils.SetFlashMessage(w, "Failed to send reset link. Try again.")
-	} else {
-		utils.SetFlashMessage(w, "Reset link sent! Check your email.")
-	}
+	//4. Store in password reset tokens collection
+	tokenColl := mongo.GetCollection("RegistrationMongo", "password_reset_tokens")
+	_, _ = tokenColl.InsertOne(ctx, bson.M{
+		"user_id":      admin.ID,
+		"token":        tokenHash,
+		"token_expiry": expiry,
+	})
+
+	//5. Sending email
+	link := fmt.Sprintf("http://localhost:8080/reset?token=%s", rawToken)
+	_ = sendResetEmail(email, link)
 	http.Redirect(w, r, "/forgot", http.StatusSeeOther)
 }
 
 func ResetHandler(w http.ResponseWriter, r *http.Request) {
-	email := r.FormValue("email")
-	ts := r.FormValue("ts")
-	token := r.FormValue("token")
+	//1. Get rawToken
+	rawToken := r.URL.Query().Get("token")
 
-	expectedHash := sha256.Sum256([]byte(email + ts + resetsecret))
-	expectedToken := hex.EncodeToString(expectedHash[:])
+	tokenHash := utils.HashSHA256(rawToken)
 
-	if token != expectedToken {
-		http.Error(w, "Invalid or tampered reset link.", http.StatusUnauthorized)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	tokenColl := mongo.GetCollection("RegistrationMongo", "password_reset_tokens")
+
+	var tokenData PasswordResetToken
+	err := tokenColl.FindOne(ctx, bson.M{"token": tokenHash}).Decode(&tokenData)
+	if err != nil {
+		render.RenderTemplateWithData(w, "Reset.html", EditPageData{
+			Error: "Invalid or expired token",
+		})
 		return
 	}
 
-	tsInt, err := strconv.ParseInt(ts, 10, 64)
-	if err != nil || time.Now().Unix()-tsInt > 900 {
-		http.Error(w, "Reset link has expired.", http.StatusUnauthorized)
+	if time.Now().Unix() > tokenData.TokenExpiry {
+		// Token expired, clean up
+		tokenColl.DeleteMany(ctx, bson.M{"user_id": tokenData.UserID})
+		render.RenderTemplateWithData(w, "Reset.html", EditPageData{
+			Error: "Token Expired",
+		})
 		return
 	}
 
@@ -164,33 +180,30 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		if newPass != confirm {
 			render.RenderTemplateWithData(w, "Reset.html", EditPageData{
 				Error: "Passwords do not match.",
-				Email: email, Ts: ts, Token: token,
+				Token: rawToken,
 			})
 			return
 		}
-		hashed, _ := bcrypt.GenerateFromPassword([]byte(newPass), bcrypt.DefaultCost)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
+		hashedPass, _ := bcrypt.GenerateFromPassword([]byte(newPass), bcrypt.DefaultCost)
 
-		collection := mongo.GetCollection("RegistrationMongo", "admins")
-		_, err := collection.UpdateOne(ctx, bson.M{"email": email}, bson.M{
-			"$set": bson.M{"password": string(hashed)},
+		adminColl := mongo.GetCollection("RegistrationMongo", "admins")
+		_, err = adminColl.UpdateByID(ctx, tokenData.UserID, bson.M{
+			"$set": bson.M{"password": string(hashedPass)},
 		})
-
 		if err != nil {
 			render.RenderTemplateWithData(w, "Reset.html", EditPageData{
-				Error: "Failed to update password",
-				Email: email, Ts: ts, Token: token,
+				Error: "Failed to update password.",
+				Token: rawToken,
 			})
 			return
 		}
-		utils.SetFlashMessage(w, "Password updated successfully.")
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		tokenColl.DeleteMany(ctx, bson.M{"user_id": tokenData.UserID})
+		utils.SetFlashMessage(w, "Password updated successfully. Please log in.")
+		http.Redirect(w, r, "/", http.StatusSeeOther) // Redirect to login page
 		return
 	}
-
 	render.RenderTemplateWithData(w, "Reset.html", EditPageData{
-		Email: email, Ts: ts, Token: token,
+		Token: rawToken,
 	})
 }

@@ -39,3 +39,9 @@ type EditPageData struct {
 type EmailData struct {
 	ResetLink string
 }
+
+type PasswordResetToken struct {
+	UserID      primitive.ObjectID `bson:"user_id"`
+	TokenHash   string             `bson:"token"`
+	TokenExpiry int64              `bson:"token_expiry"`
+}
