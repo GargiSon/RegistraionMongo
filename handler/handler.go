@@ -6,6 +6,7 @@ import (
 	"go2/render"
 	"go2/utils"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -20,10 +21,22 @@ func init() {
 		MaxAge:   3600,
 		Path:     "/",
 	}
+
+	//Paging limit from env
+	if limitStr := os.Getenv("USER_PAGE_LIMIT"); limitStr != "" {
+		if val, err := strconv.Atoi(limitStr); err == nil && val > 0 {
+			userPageLimit = val
+		} else { //if error
+			userPageLimit = 5
+		}
+	} else { //default
+		userPageLimit = 5
+	}
 }
 
+var userPageLimit int
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	const limit = 5
 	page := 1
 
 	session, _ := store.Get(r, "session")
@@ -57,7 +70,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		sortOrder = "desc"
 	}
 
-	offset := (page - 1) * limit
+	offset := (page - 1) * userPageLimit
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -66,7 +79,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	findOptions := options.Find().
 		SetSkip(int64(offset)).
-		SetLimit(int64(limit)).
+		SetLimit(int64(userPageLimit)).
 		SetSort(bson.D{{Key: sortField, Value: getSortOrderValue(sortOrder)}})
 
 	cursor, err := collection.Find(ctx, bson.M{}, findOptions)
@@ -94,7 +107,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	totalPages := int((total + int64(limit) - 1) / int64(limit))
+	totalPages := int((total + int64(userPageLimit) - 1) / int64(userPageLimit))
 
 	flash := utils.GetFlashMessage(w, r)
 

@@ -146,7 +146,7 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ResetHandler(w http.ResponseWriter, r *http.Request) {
-	//1. Get rawToken
+	// Get rawToken
 	rawToken := r.URL.Query().Get("token")
 
 	tokenHash := utils.HashSHA256(rawToken)
