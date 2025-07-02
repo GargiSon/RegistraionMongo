@@ -17,6 +17,12 @@ type User struct {
 	ImageBase64 string
 }
 
+type Admin struct {
+	ID       primitive.ObjectID `bson:"_id,omitempty"`
+	Email    string             `bson:"email"`
+	Password string             `bson:"password"`
+}
+
 // this is used for html queries not for mongodb so, bson is not required!
 type EditPageData struct {
 	User       User

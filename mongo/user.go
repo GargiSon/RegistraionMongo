@@ -9,21 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// type Users struct {
-// 	ID          primitive.ObjectID `bson:"_id,omitempty"`
-// 	Username    string             `bson:"username"`
-// 	Password    string             `bson:"password"`
-// 	Email       string             `bson:"email"`
-// 	Mobile      string             `bson:"mobile"`
-// 	Address     string             `bson:"address"`
-// 	Gender      string             `bson:"gender"`
-// 	Sports      string             `bson:"sports"`
-// 	DOB         string             `bson:"dob"`
-// 	Country     string             `bson:"country"`
-// 	Image       []byte             `bson:"image,omitempty"`
-// 	ImageBase64 string             `bson:"-"`
-// }
-
 func GetUserCollection() *mongo.Collection {
 	return GetCollection("RegistrationMongo", "users")
 }

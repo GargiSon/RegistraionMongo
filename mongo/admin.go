@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"go2/model"
 	"os"
 	"time"
 
@@ -13,8 +14,8 @@ func getDBName() string {
 	return os.Getenv("MONGO_DB_NAME")
 }
 
-func GetAdminByEmail(ctx context.Context, email string) (Admin, error) {
-	var admin Admin
+func GetAdminByEmail(ctx context.Context, email string) (model.Admin, error) {
+	var admin model.Admin
 	collection := GetCollection(getDBName(), "admins")
 	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&admin)
 	return admin, err
