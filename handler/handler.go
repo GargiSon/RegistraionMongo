@@ -7,33 +7,9 @@ import (
 	"go2/render"
 	"go2/utils"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
-
-	"github.com/gorilla/sessions"
 )
-
-func init() {
-	store.Options = &sessions.Options{
-		HttpOnly: true,
-		MaxAge:   3600,
-		Path:     "/",
-	}
-
-	//Paging limit from env
-	if limitStr := os.Getenv("USER_PAGE_LIMIT"); limitStr != "" {
-		if val, err := strconv.Atoi(limitStr); err == nil && val > 0 {
-			userPageLimit = val
-		} else { //if error
-			userPageLimit = 5
-		}
-	} else { //default
-		userPageLimit = 5
-	}
-}
-
-var userPageLimit int
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	page := 1

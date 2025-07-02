@@ -12,6 +12,8 @@ func main() {
 	// Run this single time
 	// mongo.Connect()
 
+	handler.InitSession()
+
 	mongo.InitMongoData()
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 

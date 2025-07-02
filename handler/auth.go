@@ -15,11 +15,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var store = sessions.NewCookieStore([]byte("super-secret-session-key"))
 
 func sendResetEmail(toEmail, resetLink string) error {
 	email := os.Getenv("SMTP_EMAIL")

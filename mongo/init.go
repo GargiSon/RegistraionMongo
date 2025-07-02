@@ -16,7 +16,7 @@ func InitMongoData() {
 
 	db := os.Getenv("MONGO_DB_NAME")
 	if db == "" {
-		log.Println("MONGO_DB_NAME not set in environment variables")
+		log.Println("MONGO_DB_NAME not set")
 		return
 	}
 
