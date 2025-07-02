@@ -58,6 +58,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(password)) != nil {
 		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
 			Error: "Invalid email or password",
+			Title: "Login",
 		})
 		return
 	}
@@ -87,7 +88,11 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		render.RenderTemplateWithData(w, "Forgot.html", model.ForgotPageData{Info: utils.GetFlashMessage(w, r)})
+		render.RenderTemplateWithData(w, "Forgot.html", model.ForgotPageData{
+			Info:  utils.GetFlashMessage(w, r),
+			Title: "Forgot Password",
+			Error: "",
+		})
 		return
 	}
 
@@ -145,6 +150,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 			Error: "Invalid or expired token",
+			Title: "Reset Password",
 		})
 		return
 	}

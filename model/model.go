@@ -63,13 +63,17 @@ type EmailData struct {
 
 type LoginPageData struct {
 	Error string
+	Title string
 }
 
 type ForgotPageData struct {
-	Info string
+	Info  string
+	Title string
+	Error string
 }
 
 type ResetPageData struct {
 	Error string
 	Token string
+	Title string
 }
