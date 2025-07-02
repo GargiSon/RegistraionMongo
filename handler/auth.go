@@ -44,7 +44,7 @@ func sendResetEmail(toEmail, resetLink string) error {
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		render.RenderTemplateWithData(w, "Login.html", model.EditPageData{})
+		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{})
 		return
 	}
 
@@ -56,7 +56,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	admin, err := mongo.GetAdminByEmail(ctx, email)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(password)) != nil {
-		render.RenderTemplateWithData(w, "Login.html", model.EditPageData{
+		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
 			Error: "Invalid email or password",
 		})
 		return
@@ -69,7 +69,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	session.Values["admin_name"] = parts[0]
 	err = session.Save(r, w)
 	if err != nil {
-		render.RenderTemplateWithData(w, "Login.html", model.EditPageData{
+		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
 			Error: "Failed to start session",
 		})
 		return
@@ -87,7 +87,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		render.RenderTemplateWithData(w, "Forgot.html", model.EditPageData{Info: utils.GetFlashMessage(w, r)})
+		render.RenderTemplateWithData(w, "Forgot.html", model.ForgotPageData{Info: utils.GetFlashMessage(w, r)})
 		return
 	}
 
@@ -143,7 +143,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 
 	tokenData, err := mongo.FindResetToken(ctx, tokenHash)
 	if err != nil {
-		render.RenderTemplateWithData(w, "Reset.html", model.EditPageData{
+		render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 			Error: "Invalid or expired token",
 		})
 		return
@@ -151,7 +151,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 
 	if time.Now().Unix() > tokenData.TokenExpiry {
 		_ = mongo.DeleteResetTokensByUserID(ctx, tokenData.UserID) //Expired token clean up
-		render.RenderTemplateWithData(w, "Reset.html", model.EditPageData{
+		render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 			Error: "Token Expired",
 		})
 		return
@@ -161,7 +161,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		newPass := r.FormValue("password")
 		confirm := r.FormValue("confirm")
 		if newPass != confirm {
-			render.RenderTemplateWithData(w, "Reset.html", model.EditPageData{
+			render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 				Error: "Passwords do not match.",
 				Token: rawToken,
 			})
@@ -171,7 +171,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		hashedPass, _ := bcrypt.GenerateFromPassword([]byte(newPass), bcrypt.DefaultCost)
 		err := mongo.UpdateAdminPassword(ctx, tokenData.UserID, string(hashedPass))
 		if err != nil {
-			render.RenderTemplateWithData(w, "Reset.html", model.EditPageData{
+			render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 				Error: "Failed to update password.",
 				Token: rawToken,
 			})
@@ -183,7 +183,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	render.RenderTemplateWithData(w, "Reset.html", model.EditPageData{
+	render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 		Token: rawToken,
 	})
 }

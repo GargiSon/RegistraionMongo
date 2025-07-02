@@ -23,31 +23,53 @@ type Admin struct {
 	Password string             `bson:"password"`
 }
 
+type PasswordResetToken struct {
+	UserID      primitive.ObjectID `bson:"user_id"`
+	TokenHash   string             `bson:"token"`
+	TokenExpiry int64              `bson:"token_expiry"`
+}
+
 // this is used for html queries not for mongodb so, bson is not required!
-type EditPageData struct {
-	User       User
-	Countries  []string
-	SportsMap  map[string]bool
-	Error      string
-	Title      string
+type RegisterPageData struct {
+	User      User
+	Countries []string
+	SportsMap map[string]bool
+	Error     string
+	Title     string
+}
+
+type HomePageData struct {
 	Users      []User
 	Page       int
 	TotalPages int
-	Info       string
-	Email      string
-	Ts         string
-	Token      string
+	Error      string
+	Title      string
 	SortField  string
 	SortOrder  string
 	AdminName  string
+}
+
+type EditPageData struct {
+	Title     string
+	User      User
+	Countries []string
+	SportsMap map[string]bool
+	Error     string
 }
 
 type EmailData struct {
 	ResetLink string
 }
 
-type PasswordResetToken struct {
-	UserID      primitive.ObjectID `bson:"user_id"`
-	TokenHash   string             `bson:"token"`
-	TokenExpiry int64              `bson:"token_expiry"`
+type LoginPageData struct {
+	Error string
+}
+
+type ForgotPageData struct {
+	Info string
+}
+
+type ResetPageData struct {
+	Error string
+	Token string
 }

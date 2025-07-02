@@ -21,7 +21,7 @@ import (
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	countries, err := utils.GetCountriesFromDB()
 	if err != nil {
-		render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+		render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 			Error: "Error fetching countries: " + err.Error(),
 		})
 		return
@@ -59,7 +59,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		//password
 		if password != confirm {
-			render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+			render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 				Error:     "Passwords do not match",
 				Countries: countries,
 				User:      user,
@@ -71,7 +71,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		//dob
 		dob, err := time.Parse("2006-01-02", dobStr)
 		if err != nil || dob.After(time.Now()) {
-			render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+			render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 				Error:     "Invalid or future DOB",
 				Countries: countries,
 				User:      user,
@@ -83,7 +83,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		//mobile number
 		match, err := regexp.MatchString(`^(\+\d{1,3})?\d{10}$`, mobile)
 		if err != nil || !match {
-			render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+			render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 				Error:     "Invalid mobile number format",
 				Countries: countries,
 				User:      user,
@@ -95,7 +95,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		//hashing password
 		hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+			render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 				Error:     "Password hashing failed",
 				Countries: countries,
 				User:      user,
@@ -110,7 +110,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			defer file.Close()
 			_, err := io.ReadAll(file)
 			if err != nil {
-				render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+				render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 					Error: "Error in image uploading",
 				})
 				return
@@ -121,7 +121,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		defer cancel()
 
 		if mongo.EmailExists(ctx, email) {
-			render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+			render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 				Error:     "Email already used, try a different one.",
 				Countries: countries,
 				User:      user,
@@ -131,7 +131,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if mongo.MobileExists(ctx, mobile) {
-			render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+			render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 				Error:     "Mobile number already registered",
 				Countries: countries,
 				User:      user,
@@ -143,7 +143,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		err = mongo.InsertUser(ctx, user)
 		if err != nil {
-			render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+			render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 				Error:     "Registration failed: " + err.Error(),
 				Countries: countries,
 				User:      user,
@@ -155,7 +155,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/home", http.StatusSeeOther)
 		return
 	}
-	render.RenderTemplateWithData(w, "Registration.html", model.EditPageData{
+	render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
 		Countries: countries,
 		Title:     "Add User",
 	})
@@ -164,14 +164,14 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 func EditHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
-		render.RenderTemplateWithData(w, "Home.html", model.EditPageData{Error: "Missing user ID"})
+		render.RenderTemplateWithData(w, "Home.html", model.HomePageData{Error: "Missing user ID"})
 		return
 	}
 
 	//Convert string ID to ObjectId safely...
 	objID, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		render.RenderTemplateWithData(w, "Home.html", model.EditPageData{Error: "Invalid ID format"})
+		render.RenderTemplateWithData(w, "Home.html", model.HomePageData{Error: "Invalid ID format"})
 		return
 	}
 
@@ -180,7 +180,7 @@ func EditHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := mongo.FindUserByID(ctx, objID)
 	if err != nil {
-		render.RenderTemplateWithData(w, "Home.html", model.EditPageData{
+		render.RenderTemplateWithData(w, "Home.html", model.HomePageData{
 			Error: "User not found",
 		})
 		return

@@ -50,7 +50,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	users, total, err := mongo.GetPaginatedUsers(ctx, page, userPageLimit, sortField, sortOrder)
 	if err != nil {
-		render.RenderTemplateWithData(w, "Home.html", model.EditPageData{
+		render.RenderTemplateWithData(w, "Home.html", model.HomePageData{
 			Error: "Error counting users",
 		})
 		return
@@ -59,7 +59,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	flash := utils.GetFlashMessage(w, r)
 
-	render.RenderTemplateWithData(w, "Home.html", model.EditPageData{
+	render.RenderTemplateWithData(w, "Home.html", model.HomePageData{
 		Users:      users,
 		Page:       page,
 		TotalPages: totalPages,
