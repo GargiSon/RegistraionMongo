@@ -113,9 +113,23 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	//4. Store in password reset tokens collection
 	_ = mongo.InsertResetToken(ctx, admin.ID, tokenHash, expiry)
 
-	//5. Sending email
-	link := fmt.Sprintf("http://localhost:8080/reset?token=%s", rawToken)
-	_ = sendResetEmail(email, link)
+	// 5. Get the base link from environment
+	baseURL := os.Getenv("AUTH_LINK")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080/reset?token="
+	}
+
+	link := fmt.Sprintf("%s, %s", baseURL, rawToken)
+
+	// 6. Send the reset email
+	fmt.Println("About to send email to:", email) //To verify that it is reacble or not
+	err = sendResetEmail(email, link)
+	if err != nil {
+		fmt.Println("Failed to send email:", err)
+	} else {
+		fmt.Println("Email sent to:", email)
+	}
+
 	http.Redirect(w, r, "/forgot", http.StatusSeeOther)
 }
 
