@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"go2/model"
 	"go2/mongo"
 	"go2/render"
 	"go2/utils"
@@ -11,8 +12,6 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func init() {
@@ -70,39 +69,12 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		sortOrder = "desc"
 	}
 
-	offset := (page - 1) * userPageLimit
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection := mongo.GetCollection("RegistrationMongo", "users")
-
-	findOptions := options.Find().
-		SetSkip(int64(offset)).
-		SetLimit(int64(userPageLimit)).
-		SetSort(bson.D{{Key: sortField, Value: getSortOrderValue(sortOrder)}})
-
-	cursor, err := collection.Find(ctx, bson.M{}, findOptions)
+	users, total, err := mongo.GetPaginatedUsers(ctx, page, userPageLimit, sortField, sortOrder)
 	if err != nil {
-		render.RenderTemplateWithData(w, "Home.html", EditPageData{
-			Error: "Error fetching users from database",
-		})
-		return
-	}
-	defer cursor.Close(ctx)
-
-	var users []User
-	if err := cursor.All(ctx, &users); err != nil {
-		render.RenderTemplateWithData(w, "Home.html", EditPageData{
-			Error: "Error decoding users",
-		})
-		return
-	}
-
-	// Count total documents for pagination
-	total, err := collection.CountDocuments(ctx, bson.M{})
-	if err != nil {
-		render.RenderTemplateWithData(w, "Home.html", EditPageData{
+		render.RenderTemplateWithData(w, "Home.html", model.EditPageData{
 			Error: "Error counting users",
 		})
 		return
@@ -111,7 +83,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	flash := utils.GetFlashMessage(w, r)
 
-	render.RenderTemplateWithData(w, "Home.html", EditPageData{
+	render.RenderTemplateWithData(w, "Home.html", model.EditPageData{
 		Users:      users,
 		Page:       page,
 		TotalPages: totalPages,
@@ -121,11 +93,4 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		SortOrder:  sortOrder,
 		AdminName:  adminName,
 	})
-}
-
-func getSortOrderValue(order string) int {
-	if order == "asc" {
-		return 1
-	}
-	return -1
 }
