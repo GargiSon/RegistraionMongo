@@ -76,4 +76,5 @@ type ResetPageData struct {
 	Error string
 	Token string
 	Title string
+	Info  string
 }

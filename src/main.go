@@ -13,8 +13,6 @@ func main() {
 	// mongo.Connect()
 
 	handler.InitSession()
-
-	http.HandleFunc("/templogin", handler.TempLoginHandler)
 	mongo.InitMongoData()
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 

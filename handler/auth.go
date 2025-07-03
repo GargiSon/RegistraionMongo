@@ -123,6 +123,8 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	utils.SetFlashMessage(w, "If the email exists, a reset link will be sent.")
 	//If the admin donot exist, do not proceed further, silently redirect
 	if err != nil {
+		fmt.Println("GetAdminByEmail ERROR:", err)
+		fmt.Println("Email not found in DB:", email)
 		http.Redirect(w, r, "/forgot", http.StatusSeeOther)
 		return
 	}
@@ -133,7 +135,12 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	expiry := time.Now().Add(15 * time.Minute).Unix()
 
 	//4. Store in password reset tokens collection
-	_ = mongo.InsertResetToken(ctx, admin.ID, tokenHash, expiry)
+	err = mongo.InsertResetToken(ctx, admin.ID, tokenHash, expiry)
+	if err != nil {
+		fmt.Println("Failed to store token:", err)
+		return
+	}
+	fmt.Println("Token stored in DB")
 
 	// 5. Get the base link from environment
 	baseURL := os.Getenv("AUTH_LINK")
@@ -144,7 +151,7 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	link := fmt.Sprintf("%s%s", baseURL, rawToken)
 
 	// 6. Send the reset email
-	fmt.Println("About to send email to:", email) //To verify that it is reacble or not
+	fmt.Println("About to send email to:", email)
 	err = sendResetEmail(email, link)
 	if err != nil {
 		fmt.Println("Failed to send email:", err)
@@ -212,17 +219,4 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		Token: rawToken,
 		Title: "Reset Password",
 	})
-}
-
-func TempLoginHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "session")
-	session.Values["authenticated"] = true
-	session.Values["email"] = "admin@temp.com"
-	session.Values["admin_name"] = "tempadmin"
-	err := session.Save(r, w)
-	if err != nil {
-		http.Error(w, "Failed to start session", http.StatusInternalServerError)
-		return
-	}
-	http.Redirect(w, r, "/home", http.StatusSeeOther)
 }
