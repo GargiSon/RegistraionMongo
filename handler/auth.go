@@ -9,20 +9,16 @@ import (
 	"go2/render"
 	"go2/utils"
 	"net/http"
-	"net/smtp"
 	"os"
 	"strings"
 	"text/template"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/gomail.v2"
 )
 
 func sendResetEmail(toEmail, resetLink string) error {
-	email := os.Getenv("SMTP_EMAIL")
-	password := os.Getenv("SMTP_PASSWORD")
-	auth := smtp.PlainAuth("", email, password, "smtp.gmail.com")
-
 	tmpl, err := template.ParseFiles("templates/reset_email.html")
 	if err != nil {
 		return fmt.Errorf("error parsing template: %w", err)
@@ -34,17 +30,18 @@ func sendResetEmail(toEmail, resetLink string) error {
 		return fmt.Errorf("error executing template: %w", err)
 	}
 
-	headers := []string{
-		"Subject : Password Reset Link",
-		"MIME-Version: 1.0",
-		`Content-Type: text/html; charset="UTF-8`,
-		"",
-	}
+	email := os.Getenv("SMTP_EMAIL")
+	password := os.Getenv("SMTP_PASSWORD")
 
-	msg := []byte(strings.Join(headers, "\r\n") + bodyBuffer.String())
+	m := gomail.NewMessage()
+	m.SetHeader("From", email)
+	m.SetHeader("To", toEmail)
+	m.SetHeader("Subject", "Password Reset Link")
+	m.SetBody("text/html", bodyBuffer.String())
 
-	err = smtp.SendMail("smtp.gmail.com:587", auth, email, []string{toEmail}, msg)
-	if err != nil {
+	d := gomail.NewDialer("smtp.gmail.com", 587, email, password)
+
+	if err := d.DialAndSend(m); err != nil {
 		return fmt.Errorf("failed to send mail: %w", err)
 	}
 	return nil
