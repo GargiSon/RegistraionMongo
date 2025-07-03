@@ -23,9 +23,6 @@ func sendResetEmail(toEmail, resetLink string) error {
 	password := os.Getenv("SMTP_PASSWORD")
 	auth := smtp.PlainAuth("", email, password, "smtp.gmail.com")
 
-	subject := "Subject: Password Reset Link\n"
-	headers := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-
 	tmpl, err := template.ParseFiles("templates/reset_email.html")
 	if err != nil {
 		return fmt.Errorf("error parsing template: %w", err)
@@ -37,9 +34,20 @@ func sendResetEmail(toEmail, resetLink string) error {
 		return fmt.Errorf("error executing template: %w", err)
 	}
 
-	msg := []byte(subject + headers + bodyBuffer.String())
+	headers := []string{
+		"Subject : Password Reset Link",
+		"MIME-Version: 1.0",
+		`Content-Type: text/html; charset="UTF-8`,
+		"",
+	}
 
-	return smtp.SendMail("smtp.gmail.com:587", auth, email, []string{toEmail}, msg)
+	msg := []byte(strings.Join(headers, "\r\n") + bodyBuffer.String())
+
+	err = smtp.SendMail("smtp.gmail.com:587", auth, email, []string{toEmail}, msg)
+	if err != nil {
+		return fmt.Errorf("failed to send mail: %w", err)
+	}
+	return nil
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
