@@ -92,6 +92,23 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//image
+		file, _, err := r.FormFile("image")
+		if err == nil {
+			defer file.Close()
+			imageBytes, err := io.ReadAll(file)
+			if err != nil {
+				render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
+					Error:     "Error in image uploading",
+					Countries: countries,
+					User:      user,
+					SportsMap: sportsMap,
+				})
+				return
+			}
+			user.Image = imageBytes //For storing the image
+		}
+
 		//hashing password
 		hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
@@ -102,19 +119,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 				SportsMap: sportsMap,
 			})
 			return
-		}
-
-		//image
-		file, _, err := r.FormFile("image")
-		if err == nil {
-			defer file.Close()
-			_, err := io.ReadAll(file)
-			if err != nil {
-				render.RenderTemplateWithData(w, "Registration.html", model.RegisterPageData{
-					Error: "Error in image uploading",
-				})
-				return
-			}
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
