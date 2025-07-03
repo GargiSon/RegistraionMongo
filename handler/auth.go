@@ -44,7 +44,9 @@ func sendResetEmail(toEmail, resetLink string) error {
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{})
+		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
+			Title: "Login",
+		})
 		return
 	}
 
@@ -63,6 +65,15 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(password))
+	if err != nil {
+		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
+			Error: "Invalid PASSWORD",
+			Title: "Login",
+		})
+		return
+	}
+
 	session, _ := store.Get(r, "session")
 	session.Values["authenticated"] = true
 	session.Values["email"] = email
@@ -72,6 +83,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
 			Error: "Failed to start session",
+			Title: "Login",
 		})
 		return
 	}
@@ -124,7 +136,7 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		baseURL = "http://localhost:8080/reset?token="
 	}
 
-	link := fmt.Sprintf("%s, %s", baseURL, rawToken)
+	link := fmt.Sprintf("%s%s", baseURL, rawToken)
 
 	// 6. Send the reset email
 	fmt.Println("About to send email to:", email) //To verify that it is reacble or not
@@ -159,6 +171,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		_ = mongo.DeleteResetTokensByUserID(ctx, tokenData.UserID) //Expired token clean up
 		render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 			Error: "Token Expired",
+			Title: "Reset Password",
 		})
 		return
 	}
@@ -170,6 +183,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 			render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 				Error: "Passwords do not match.",
 				Token: rawToken,
+				Title: "Reset Password",
 			})
 			return
 		}
@@ -191,5 +205,19 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 		Token: rawToken,
+		Title: "Reset Password",
 	})
+}
+
+func TempLoginHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "session")
+	session.Values["authenticated"] = true
+	session.Values["email"] = "admin@temp.com"
+	session.Values["admin_name"] = "tempadmin"
+	err := session.Save(r, w)
+	if err != nil {
+		http.Error(w, "Failed to start session", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/home", http.StatusSeeOther)
 }
