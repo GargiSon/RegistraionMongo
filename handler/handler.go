@@ -8,24 +8,27 @@ import (
 	"go2/utils"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
+	setNoCacheHeaders(w)
+
 	page := 1
 
-	session, _ := store.Get(r, "session")
-	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+	email, ok := GetSessionEmail(r)
+	if !ok {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
 	adminName := ""
-	if name, ok := session.Values["admin_name"].(string); ok {
-		adminName = name
+	if parts := strings.Split(email, "@"); len(parts) > 0 {
+		adminName = parts[0]
 	}
 
-	//Getting query parameter
+	// Get query parameters
 	pageStr := r.URL.Query().Get("page")
 	sortField := r.URL.Query().Get("field")
 	sortOrder := r.URL.Query().Get("order")
@@ -55,8 +58,8 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	totalPages := int((total + int64(userPageLimit) - 1) / int64(userPageLimit))
 
+	totalPages := int((total + int64(userPageLimit) - 1) / int64(userPageLimit))
 	flash := utils.GetFlashMessage(w, r)
 
 	render.RenderTemplateWithData(w, "Home.html", model.HomePageData{

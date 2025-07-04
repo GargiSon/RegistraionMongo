@@ -10,7 +10,6 @@ import (
 	"go2/utils"
 	"net/http"
 	"os"
-	"strings"
 	"text/template"
 	"time"
 
@@ -39,6 +38,7 @@ func sendResetEmail(toEmail, resetLink string) error {
 	m.SetHeader("Subject", "Password Reset Link")
 	m.SetBody("text/html", bodyBuffer.String())
 
+	//Configures SMTP dialer using Gmail
 	d := gomail.NewDialer("smtp.gmail.com", 587, email, password)
 
 	if err := d.DialAndSend(m); err != nil {
@@ -48,13 +48,21 @@ func sendResetEmail(toEmail, resetLink string) error {
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	setNoCacheHeaders(w)
+
 	if r.Method == http.MethodGet {
+		// If already logged in, redirect to home
+		if _, ok := GetSessionEmail(r); ok {
+			http.Redirect(w, r, "/home", http.StatusSeeOther)
+			return
+		}
 		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
 			Title: "Login",
 		})
 		return
 	}
 
+	//POST Logic
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 
@@ -62,6 +70,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	admin, err := mongo.GetAdminByEmail(ctx, email)
+
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(password)) != nil {
 		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
 			Error: "Invalid email or password",
@@ -70,40 +79,19 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(password))
-	if err != nil {
-		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
-			Error: "Invalid PASSWORD",
-			Title: "Login",
-		})
-		return
-	}
-
-	session, _ := store.Get(r, "session")
-	session.Values["authenticated"] = true
-	session.Values["email"] = email
-	parts := strings.Split(email, "@")
-	session.Values["admin_name"] = parts[0]
-	err = session.Save(r, w)
-	if err != nil {
-		render.RenderTemplateWithData(w, "Login.html", model.LoginPageData{
-			Error: "Failed to start session",
-			Title: "Login",
-		})
-		return
-	}
-
+	// Set session using in-memory map and cookie, Login successful redirect to home
+	SetSession(w, email)
 	http.Redirect(w, r, "/home", http.StatusSeeOther)
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "session")
-	session.Options.MaxAge = -1
-	session.Save(r, w)
+	setNoCacheHeaders(w)
+	ClearSession(w, r)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	// Get request, displays forget password form
 	if r.Method == http.MethodGet {
 		render.RenderTemplateWithData(w, "Forgot.html", model.ForgotPageData{
 			Info:  utils.GetFlashMessage(w, r),
@@ -113,28 +101,25 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//1. Admin Enters email through form
+	// Admin enters email through form
 	email := r.FormValue("email")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	//2. Find email in database and Display Generic message after getting email to provide authentication
 	admin, err := mongo.GetAdminByEmail(ctx, email)
 	utils.SetFlashMessage(w, "If the email exists, a reset link will be sent.")
-	//If the admin donot exist, do not proceed further, silently redirect
 	if err != nil {
-		fmt.Println("GetAdminByEmail ERROR:", err)
 		fmt.Println("Email not found in DB:", email)
 		http.Redirect(w, r, "/forgot", http.StatusSeeOther)
 		return
 	}
 
-	//3. Generate secure token(generate + hash + expiry)
+	// Generate secure token (generate + hash + expiry)
 	rawToken := utils.GenerateSecureToken(64)
 	tokenHash := utils.HashSHA256(rawToken)
 	expiry := time.Now().Add(15 * time.Minute).Unix()
 
-	//4. Store in password reset tokens collection
+	// Store in password reset tokens collection
 	err = mongo.InsertResetToken(ctx, admin.ID, tokenHash, expiry)
 	if err != nil {
 		fmt.Println("Failed to store token:", err)
@@ -142,16 +127,14 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Token stored in DB")
 
-	// 5. Get the base link from environment
+	// Get the base link from environment
 	baseURL := os.Getenv("AUTH_LINK")
 	if baseURL == "" {
 		baseURL = "http://localhost:8080/reset?token="
 	}
+	link := baseURL + rawToken
 
-	link := fmt.Sprintf("%s%s", baseURL, rawToken)
-
-	// 6. Send the reset email
-	fmt.Println("About to send email to:", email)
+	// Send reset email
 	err = sendResetEmail(email, link)
 	if err != nil {
 		fmt.Println("Failed to send email:", err)
@@ -163,7 +146,8 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ResetHandler(w http.ResponseWriter, r *http.Request) {
-	// Get rawToken
+	setNoCacheHeaders(w)
+
 	rawToken := r.URL.Query().Get("token")
 	tokenHash := utils.HashSHA256(rawToken)
 
@@ -180,7 +164,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if time.Now().Unix() > tokenData.TokenExpiry {
-		_ = mongo.DeleteResetTokensByUserID(ctx, tokenData.UserID) //Expired token clean up
+		_ = mongo.DeleteResetTokensByUserID(ctx, tokenData.UserID)
 		render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 			Error: "Token Expired",
 			Title: "Reset Password",
@@ -206,6 +190,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 			render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 				Error: "Failed to update password.",
 				Token: rawToken,
+				Title: "Reset Password",
 			})
 			return
 		}
@@ -215,6 +200,7 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
+
 	render.RenderTemplateWithData(w, "Reset.html", model.ResetPageData{
 		Token: rawToken,
 		Title: "Reset Password",

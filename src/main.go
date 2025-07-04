@@ -17,16 +17,16 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	http.HandleFunc("/", handler.LoginHandler)
-	http.HandleFunc("/login", handler.LoginHandler)
-	http.HandleFunc("/logout", handler.LogoutHandler)
 	http.HandleFunc("/forgot", handler.ForgotPasswordHandler)
 	http.HandleFunc("/reset", handler.ResetHandler)
+	http.HandleFunc("/logout", handler.LogoutHandler)
 
-	http.HandleFunc("/register", handler.RegisterHandler)
-	http.HandleFunc("/home", handler.HomeHandler)
-	http.HandleFunc("/edit", handler.EditHandler)
-	http.HandleFunc("/update", handler.UpdateHandler)
-	http.HandleFunc("/delete", handler.DeleteHandler)
+	// Protected routes
+	http.HandleFunc("/home", handler.RequireLogin(handler.HomeHandler))
+	http.HandleFunc("/edit", handler.RequireLogin(handler.EditHandler))
+	http.HandleFunc("/register", handler.RequireLogin(handler.RegisterHandler))
+	http.HandleFunc("/update", handler.RequireLogin(handler.UpdateHandler))
+	http.HandleFunc("/delete", handler.RequireLogin(handler.DeleteHandler))
 
 	fmt.Println("Application running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

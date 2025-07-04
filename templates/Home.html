@@ -15,9 +15,9 @@
             <strong>Welcome, {{.AdminName}}</strong>
             <a href="/register"><button>Add New User</button></a>
         </div>
-        <div class="logout-btn">
-            <a href="/"><button>Logout</button></a>
-        </div>
+        <form method="POST" class="logout-btn" action="/logout" style="display:inline;">
+            <button type="submit">Logout</button>
+        </form>
     </div>
 
     <form method="get" action="/home" class="sort-form">
